@@ -4,10 +4,7 @@ import pymysql
 import nltk
 import re
 pattern_dot_num = re.compile(r'\d+[.]\d+')
-#nltk.download('movie_reviews')
-#from nltk.corpus import movie_reviews
-from konlpy.tag import Mecab
-mecab = Mecab()
+
 
 
 def is_inc_hangul(s):
@@ -32,13 +29,13 @@ c.execute(sql)
 rows = c.fetchall()
 
 sentences = []
-symbols = [',', '.', '\'', '‘','’', '"', '“', '”', '~', '`', '!', '?', '@', '$', '%', '/']
+symbols = [',', '.', '\'', '‘', '’', '"', '“', '”', '`', '!', '?', '@', '$', '%', '&', '/', '△', 'Δ', '▲', '▽', '▼', '◇', '=']
 
 for i, row in enumerate(rows):
     if i > 10000:
         break
     tokenized = nltk.word_tokenize(row['sent_original'])
-    print(tokenized)
+    print('before : ' + str(tokenized))
 
 
     for j, token in enumerate(tokenized):
@@ -57,33 +54,30 @@ for i, row in enumerate(rows):
                 else:
                     # 특수기호 빈 문자열로 다 바꾸고 나중에 tokenized list에서 공백 모두 제거
                     tokenized[j] = ''
-                break
+
 
     # 리스트에서 비어있는 원소 제거
     tokenized = ' '.join(tokenized).split()
 
-    print(tokenized)
+    print('after  : ' + str(tokenized))
     print('\n')
     sentences.append(tokenized)
-    #sentences.append(mecab.morphs(row['sent_original']))
 
-
-#sentences = [list(s) for s in movie_reviews.sents()]
 
 
 
 # Word2Vec 클래스 객체를 생성한다. 이 시점에 트레이닝이 이루어진다.
-model = Word2Vec(sentences, size=100, window=2, iter=100, workers=os.cpu_count(), min_count=1, sg=1)
+model = Word2Vec(sentences, size=300, window=2, iter=200, workers=os.cpu_count(), min_count=5, sg=1)
 
 # 트레이닝 완료되면 필요없는 메모리 unload
 model.init_sims(replace=True)
 
 # 매번 model만들지 말고, 한번 만들고 나서 저장하고 로컬에서 model받아와서 실행하도록 코딩하자
-#model.wv.save_word2vec_format('test.txt')
+model.wv.save_word2vec_format('w2v.model')
 
 
 #print(model.wv['교사'])
-print(model.most_similar('폭행', topn=30))
+#print(model.most_similar('폭행', topn=30))
 
 
 
