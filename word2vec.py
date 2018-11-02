@@ -2,11 +2,21 @@ from gensim.models import Word2Vec
 import os
 import pymysql
 import nltk
+import re
+pattern_dot_num = re.compile(r'\d+[.]\d+')
 #nltk.download('movie_reviews')
 #from nltk.corpus import movie_reviews
-
 from konlpy.tag import Mecab
 mecab = Mecab()
+
+
+def is_inc_hangul(s):
+    for c in s:
+        if c >= '가' and c <= '힣':
+            return True
+    return False
+
+
 
 conn = pymysql.connect(host='163.239.169.54',
                        port=3306,
@@ -22,14 +32,39 @@ c.execute(sql)
 rows = c.fetchall()
 
 sentences = []
-symbols = [',', '.', "'", '‘','’', '"', '“', '”', '~', '`', '!', '?', '@', '$', '%']
+symbols = [',', '.', '\'', '‘','’', '"', '“', '”', '~', '`', '!', '?', '@', '$', '%', '/']
 
 for i, row in enumerate(rows):
     if i > 10000:
         break
-    print(nltk.word_tokenize(row['sent_original']))
+    tokenized = nltk.word_tokenize(row['sent_original'])
+    print(tokenized)
 
-    sentences.append(nltk.word_tokenize(row['sent_original']))
+
+    for j, token in enumerate(tokenized):
+        for symbol in symbols:
+            if symbol in token:
+                # '%' token은 바로 앞 token에 붙여준다.
+                if token == '%':
+                    tokenized[j-1] = tokenized[j-1] + '%'
+                    tokenized[j] = ''
+                # 특수기호와 한글이 같이 있는 문자열이면 특수기호만 제거
+                elif is_inc_hangul(token) == True:
+                    tokenized[j] = tokenized[j].replace(symbol, '')
+                # 소수점 숫자는 그냥 놔둔다.
+                elif pattern_dot_num.findall(token):
+                    break
+                else:
+                    # 특수기호 빈 문자열로 다 바꾸고 나중에 tokenized list에서 공백 모두 제거
+                    tokenized[j] = ''
+                break
+
+    # 리스트에서 비어있는 원소 제거
+    tokenized = ' '.join(tokenized).split()
+
+    print(tokenized)
+    print('\n')
+    sentences.append(tokenized)
     #sentences.append(mecab.morphs(row['sent_original']))
 
 
@@ -49,4 +84,7 @@ model.init_sims(replace=True)
 
 #print(model.wv['교사'])
 print(model.most_similar('폭행', topn=30))
+
+
+
 
